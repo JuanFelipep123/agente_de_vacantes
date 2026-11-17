@@ -1,0 +1,92 @@
+# ========================================================
+# Configuración del Perfil del Postulante
+# Modifica estos campos según tus preferencias e intereses
+# ========================================================
+
+candidato:
+  nombre: "Postulante"
+  ubicacion_base: "Colombia"
+
+busqueda:
+  # Palabras clave para los recolectores (Get on Board, CompuTrabajo, etc.)
+  roles_interes:
+    - "practicante sistemas"
+    - "practicante desarrollo"
+    - "practicante software"
+    - "desarrollador junior"
+    - "junior python"
+    - "junior backend"
+    - "junior fullstack"
+    - "pasante sistemas"
+    - "trainee"
+    - "intern"
+
+  # Modalidades permitidas: remoto, hibrido, presencial
+  modalidades_permitidas:
+    - "remoto"
+    - "hibrido"
+    - "presencial"
+
+  # Ubicaciones de interés (si no es 100% remoto)
+  ubicaciones_permitidas:
+    - "Colombia"
+    - "Remoto"
+    - "Manizales"
+    - "Caldas"
+    - "Bogotá"
+    - "Medellín"
+    - "Cali"
+
+  # Palabras que descartan la oferta automáticamente
+  palabras_excluir:
+    - "senior"
+    - "sr."
+    - "sr "
+    - "semi senior"
+    - "semi-senior"
+    - "ssr"
+    - "tech lead"
+    - "arquitecto"
+    - "5+ años"
+    - "4+ años"
+    - "gerente"
+    - "director"
+    - "psicología"
+    - "psicologia"
+    - "comercial"
+    - "ventas"
+    - "contabilidad"
+    - "salud ocupacional"
+    - "sst"
+    - "recursos humanos"
+    - "talento humano"
+
+# Tecnologías que ya dominas o estás usando
+stack_actual:
+  - "python"
+  - "fastapi"
+  - "flask"
+  - "sql"
+  - "git"
+  - "javascript"
+  - "html"
+  - "css"
+  - "rest"
+  - "sistemas"
+  - "desarrollo"
+
+# Habilidades que te interesan y donde el agente vigilará la demanda
+stack_interes:
+  - "docker"
+  - "postgresql"
+  - "react"
+  - "aws"
+  - "node"
+  - "linux"
+  - "ci/cd"
+  - "django"
+  - "testing"
+
+# Umbral de match (0 a 100) para enviar alerta inmediata a Telegram
+scoring:
+  umbral_notificacion: 50

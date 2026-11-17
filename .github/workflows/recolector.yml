@@ -1,0 +1,40 @@
+name: Agente Recolector de Vacantes
+
+on:
+  schedule:
+    # Se ejecuta cada 3 horas automáticamente (hora UTC)
+    - cron: '0 */3 * * *'
+  workflow_dispatch: # Permite ejecutarlo manualmente desde GitHub con un clic
+
+jobs:
+  recolectar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Ejecutar Agente de Vacantes
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          python main.py
+
+      - name: Guardar base de datos actualizada (evitar duplicados entre ejecuciones)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/vacantes.db
+          git commit -m "Auto-update: vacantes procesadas [skip ci]" || echo "Sin cambios nuevos en la base de datos"
+          git push || echo "No se requirió push"

@@ -20,7 +20,6 @@ class CompuTrabajoCollector(BaseCollector):
         vistos_ids = set()
 
         for query in queries:
-            # Formatear query para computrabajo slug: ej. "practicante sistemas" -> "trabajo-de-practicante-sistemas"
             slug = query.strip().lower().replace(" ", "-")
             url = f"{self.BASE_URL}/trabajo-de-{slug}"
 
@@ -50,16 +49,27 @@ class CompuTrabajoCollector(BaseCollector):
                     empresa_elem = art.select_one("p.dFlex a")
                     empresa = empresa_elem.text.strip() if empresa_elem else "Empresa Confidencial"
 
-                    # Ubicación
-                    ciudad_elem = art.select_one("p.fs16 span.mr10")
-                    ubicacion = ciudad_elem.text.strip() if ciudad_elem else "Colombia"
+                    # Ubicación precisa
+                    ubicacion = "Colombia"
+                    for p in art.select("p.fs16"):
+                        if not p.select_one("span.fwB") and not p.select_one("a[offer-grid-article-company-url]"):
+                            texto_p = p.text.strip()
+                            if texto_p and texto_p != empresa:
+                                ubicacion = texto_p
+                                break
 
-                    # Modalidad aproximada
-                    modalidad = "remoto" if "remoto" in titulo.lower() or "teletrabajo" in titulo.lower() else "presencial"
-
-                    # Resumen / descripción
+                    # Descripción / snippet
                     parrafos = [p.text.strip() for p in art.select("p") if p.text.strip()]
                     descripcion = "\n".join(parrafos)
+
+                    # Detección de modalidad
+                    texto_completo = f"{titulo} {descripcion}".lower()
+                    if any(w in texto_completo for w in ["remoto", "teletrabajo", "home office", "desde casa", "100% remoto"]):
+                        modalidad = "remoto"
+                    elif any(w in texto_completo for w in ["híbrido", "hibrido", "alternancia", "semi-presencial"]):
+                        modalidad = "hibrido"
+                    else:
+                        modalidad = "presencial"
 
                     vacante = Vacante(
                         id_origen=data_id,

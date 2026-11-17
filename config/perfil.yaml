@@ -5,10 +5,10 @@
 
 candidato:
   nombre: "Postulante"
-  ubicacion_base: "Colombia"
+  ubicacion_base: "Manizales / Pereira, Colombia"
 
 busqueda:
-  # Palabras clave para los recolectores (Get on Board, CompuTrabajo, etc.)
+  # Palabras clave para los recolectores
   roles_interes:
     - "practicante sistemas"
     - "practicante desarrollo"
@@ -21,21 +21,18 @@ busqueda:
     - "trainee"
     - "intern"
 
-  # Modalidades permitidas: remoto, hibrido, presencial
-  modalidades_permitidas:
-    - "remoto"
-    - "hibrido"
-    - "presencial"
-
-  # Ubicaciones de interés (si no es 100% remoto)
-  ubicaciones_permitidas:
-    - "Colombia"
-    - "Remoto"
-    - "Manizales"
-    - "Caldas"
-    - "Bogotá"
-    - "Medellín"
-    - "Cali"
+  # Modalidades y reglas geográficas:
+  # - Remoto: Siempre permitido (la mejor opción)
+  # - Híbrido: Permitido
+  # - Presencial: ÚNICAMENTE permitido en las ciudades listadas abajo
+  ciudades_presencial_permitidas:
+    - "manizales"
+    - "pereira"
+    - "caldas"
+    - "risaralda"
+    - "dosquebradas"
+    - "villamaría"
+    - "villamaria"
 
   # Palabras que descartan la oferta automáticamente
   palabras_excluir:
@@ -75,7 +72,7 @@ stack_actual:
   - "sistemas"
   - "desarrollo"
 
-# Habilidades que te interesan y donde el agente vigilará la demanda
+# Habilidades que te interesan (para vigilar la demanda en el radar)
 stack_interes:
   - "docker"
   - "postgresql"

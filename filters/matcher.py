@@ -21,9 +21,9 @@ class ProfileMatcher:
 
         self.roles_interes = [r.lower() for r in self.perfil.get("busqueda", {}).get("roles_interes", [])]
         self.palabras_excluir = [p.lower() for p in self.perfil.get("busqueda", {}).get("palabras_excluir", [])]
+        self.ciudades_presencial = [c.lower() for c in self.perfil.get("busqueda", {}).get("ciudades_presencial_permitidas", ["manizales", "pereira"])]
         self.stack_actual = [s.lower() for s in self.perfil.get("stack_actual", [])]
         self.stack_interes = [s.lower() for s in self.perfil.get("stack_interes", [])]
-        self.modalidades = [m.lower() for m in self.perfil.get("busqueda", {}).get("modalidades_permitidas", [])]
         self.umbral = self.perfil.get("scoring", {}).get("umbral_notificacion", 50)
 
         # Palabras clave de nivel inicial
@@ -38,16 +38,21 @@ class ProfileMatcher:
     def evaluar(self, vacante: Vacante) -> Tuple[bool, Vacante]:
         titulo_lower = vacante.titulo.lower()
         desc_lower = vacante.descripcion.lower()
-        texto_completo = f"{titulo_lower}\n{desc_lower}"
+        ubicacion_lower = vacante.ubicacion.lower()
+        texto_completo = f"{titulo_lower}\n{desc_lower}\n{ubicacion_lower}"
 
-        # 1. Filtro duro de exclusión
+        # 1. Filtro duro de exclusión por palabras prohibidas
         for palabra in self.palabras_excluir:
             if self._contiene(titulo_lower, palabra):
                 return False, vacante
 
-        # 2. Filtro de modalidad
-        if vacante.modalidad.lower() not in self.modalidades:
-            return False, vacante
+        # 2. FILTRO DURO DE MODALIDAD Y UBICACIÓN
+        # Si es presencial, SOLO se permite si es en Manizales o Pereira
+        if vacante.modalidad.lower() == "presencial":
+            es_zona_permitida = any(ciudad in ubicacion_lower or ciudad in texto_completo for ciudad in self.ciudades_presencial)
+            if not es_zona_permitida:
+                # Descartada: Presencial en otra ciudad no deseada (Bogotá, Medellín, etc.)
+                return False, vacante
 
         score = 0
         razones: List[str] = []
@@ -75,15 +80,20 @@ class ProfileMatcher:
             score += pts_tech
             razones.append(f"Coincide con tu stack: {', '.join(skills_encontradas)}")
 
-        # D. Detección de tecnologías que piden que NO dominas aún (para el radar y estudio)
+        # D. Detección de brechas / qué estudiar (radar)
         for tech in self.CATALOGO_TECH:
             if tech not in self.stack_actual and self._contiene(texto_completo, tech):
                 faltantes.append(tech)
 
-        # E. Puntos por modalidad remota
+        # E. Ponderación por modalidad y ubicación
         if vacante.modalidad.lower() == "remoto":
+            score += 20
+            razones.append("Modalidad 100% Remota (Máxima prioridad)")
+        elif vacante.modalidad.lower() == "hibrido":
             score += 10
-            razones.append("Modalidad Remota")
+            razones.append("Modalidad Híbrida")
+        elif vacante.modalidad.lower() == "presencial":
+            razones.append(f"Presencial en tu zona ({vacante.ubicacion})")
 
         # Asignar resultados
         vacante.match_score = min(100, score)

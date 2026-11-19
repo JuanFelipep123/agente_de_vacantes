@@ -13,24 +13,6 @@ class GetOnBrdCollector(BaseCollector):
 
     def __init__(self):
         super().__init__(nombre="getonbrd")
-        self._cache_empresas: Dict[int, str] = {}
-
-    def _obtener_nombre_empresa(self, company_id: Optional[int]) -> str:
-        if not company_id:
-            return "Empresa Confidencial"
-        if company_id in self._cache_empresas:
-            return self._cache_empresas[company_id]
-        
-        try:
-            url = f"{self.BASE_URL}/companies/{company_id}"
-            res = requests.get(url, headers=self.HEADERS, timeout=5)
-            if res.status_code == 200:
-                nombre = res.json().get("data", {}).get("attributes", {}).get("name", "Empresa")
-                self._cache_empresas[company_id] = nombre
-                return nombre
-        except Exception:
-            pass
-        return "Empresa"
 
     def recolectar(self, queries: List[str]) -> List[Vacante]:
         vacantes: List[Vacante] = []
@@ -38,10 +20,10 @@ class GetOnBrdCollector(BaseCollector):
 
         for query in queries:
             url = f"{self.BASE_URL}/search/jobs"
-            params = {"query": query, "per_page": 25}
+            params = {"query": query, "per_page": 20}
 
             try:
-                res = requests.get(url, headers=self.HEADERS, params=params, timeout=10)
+                res = requests.get(url, headers=self.HEADERS, params=params, timeout=8)
                 if res.status_code != 200:
                     continue
 
@@ -53,9 +35,16 @@ class GetOnBrdCollector(BaseCollector):
                     vistas_ids.add(job_id)
 
                     attr = item.get("attributes", {})
-                    company_data = attr.get("company", {}).get("data", {})
-                    company_id = company_data.get("id")
-                    empresa = self._obtener_nombre_empresa(company_id)
+                    
+                    # URL pública de postulación
+                    job_url = item.get("links", {}).get("public_url") or f"https://www.getonbrd.com/jobs/{job_id}"
+
+                    # Obtener nombre de empresa desde el slug de la URL de forma instantánea
+                    # ej: /jobs/desarrollador-junior-empresa-bogota -> empresa
+                    empresa = "Empresa Tech"
+                    partes_slug = job_url.split("/jobs/")[-1].split("-")
+                    if len(partes_slug) >= 2:
+                        empresa = partes_slug[-2].replace("_", " ").capitalize()
 
                     # Modalidad y ubicación
                     es_remoto = attr.get("remote", False)
@@ -64,21 +53,18 @@ class GetOnBrdCollector(BaseCollector):
 
                     # Fecha
                     pub_str = attr.get("published_at")
-                    fecha_pub = None
+                    fecha_pub = datetime.now()
                     if pub_str:
                         try:
                             fecha_pub = datetime.fromtimestamp(pub_str)
                         except Exception:
                             pass
 
-                    # Descripción consolidada para análisis
+                    # Descripción consolidada
                     desc_completa = f"{attr.get('description_headline', '')}\n{attr.get('description', '')}\n{attr.get('functions', '')}\n{attr.get('desirable', '')}"
 
-                    # URL pública de postulación
-                    job_url = item.get("links", {}).get("public_url") or f"https://www.getonbrd.com/jobs/{item.get('id')}"
-
                     vacante = Vacante(
-                        id_origen=job_id,
+                        id_origen=f"gob_{job_id}",
                         fuente=self.nombre,
                         titulo=attr.get("title", "Sin título"),
                         empresa=empresa,

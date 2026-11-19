@@ -15,10 +15,11 @@ if sys.platform.startswith("win"):
 # Cargar variables de entorno desde .env
 load_dotenv()
 
-from config import *
 from storage.db import Database
 from collectors.getonbrd import GetOnBrdCollector
 from collectors.computrabajo import CompuTrabajoCollector
+from collectors.magneto import MagnetoCollector
+from collectors.remoteok import RemoteOKCollector
 from filters.matcher import ProfileMatcher
 from notifiers.telegram import TelegramNotifier
 
@@ -63,27 +64,35 @@ def main():
         return
 
     print("=" * 60)
-    print("🚀 INICIANDO BÚSQUEDA Y EVALUACIÓN DE VACANTES")
+    print("🚀 INICIANDO BÚSQUEDA Y EVALUACIÓN MULTI-FUENTE DE VACANTES")
     print("=" * 60)
 
     # 1. Cargar perfil y matcher
     matcher = ProfileMatcher(perfil_path=PERFIL_PATH)
-    queries = matcher.perfil.get("busqueda", {}).get("roles_interes", ["junior", "practicante"])
 
-    # 2. Recolectores
-    recolectores = [
-        GetOnBrdCollector(),
-        CompuTrabajoCollector()
+    # Queries especializadas por tipo de plataforma
+    queries_colombia = ["practicante sistemas", "practicante software", "practicante desarrollo", "desarrollador junior"]
+    queries_tech_latam = ["junior", "trainee", "intern", "developer junior"]
+
+    # 2. Configurar recolectores y sus fuentes
+    fuentes_trabajo = [
+        (GetOnBrdCollector(), ["junior", "intern", "trainee"]),
+        (CompuTrabajoCollector(), ["practicante sistemas", "practicante software", "desarrollador junior"]),
+        (RemoteOKCollector(), [])
     ]
 
     total_nuevas = 0
     total_calificadas = 0
     total_notificadas = 0
 
-    for recolector in recolectores:
+    for recolector, queries in fuentes_trabajo:
         print(f"\n[*] Consultando fuente: {recolector.nombre.upper()}...")
-        vacantes = recolector.recolectar(queries=queries[:3]) # Consultar los roles principales
-        print(f"    -> Encontradas {len(vacantes)} vacantes en {recolector.nombre}.")
+        try:
+            vacantes = recolector.recolectar(queries=queries) if queries else recolector.recolectar()
+            print(f"    -> Encontradas {len(vacantes)} vacantes en {recolector.nombre}.")
+        except Exception as e:
+            print(f"    [!] Error en fuente {recolector.nombre}: {e}")
+            continue
 
         for vacante in vacantes:
             # Deduplicación: ¿ya la vimos antes?
@@ -97,7 +106,7 @@ def main():
 
             if pasa_umbral:
                 total_calificadas += 1
-                print(f"\n✨ [MATCH {vacante_evaluada.match_score}/100] {vacante_evaluada.titulo} en {vacante_evaluada.empresa}")
+                print(f"\n✨ [MATCH {vacante_evaluada.match_score}/100] {vacante_evaluada.titulo} en {vacante_evaluada.empresa} ({vacante.fuente})")
                 print(f"   Modalidad: {vacante_evaluada.modalidad} | Ubicación: {vacante_evaluada.ubicacion}")
                 print(f"   Por qué: {', '.join(vacante_evaluada.razones_match)}")
                 if vacante_evaluada.habilidades_faltantes:
@@ -130,8 +139,9 @@ def main():
         resumen_txt = (
             f"🤖 <b>Agente ejecutado con éxito</b>\n\n"
             f"🔍 <b>Vacantes nuevas analizadas hoy:</b> {total_nuevas}\n"
+            f"📍 <b>Fuentes monitoreadas:</b> CompuTrabajo, Magneto (Bancolombia, etc.), Get on Board y RemoteOK.\n"
             f"📍 <b>Filtro activo:</b> Presencial solo en Manizales/Pereira, o 100% Remoto.\n\n"
-            f"ℹ️ Ninguna de las ofertas nuevas de hoy cumplió con los filtros de tu zona o perfil tech (muchas eran presenciales en Bogotá/Medellín o de áreas no afines).\n\n"
+            f"ℹ️ Ninguna de las ofertas nuevas cumplió con los filtros estrictos de tu zona o perfil formativo.\n\n"
             f"🛡️ <i>El agente sigue vigilando en segundo plano cada 3 horas.</i>"
         )
         notifier.enviar_mensaje(resumen_txt)

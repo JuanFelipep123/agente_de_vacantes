@@ -24,7 +24,7 @@ class CompuTrabajoCollector(BaseCollector):
             url = f"{self.BASE_URL}/trabajo-de-{slug}"
 
             try:
-                res = requests.get(url, headers=self.HEADERS, timeout=10)
+                res = requests.get(url, headers=self.HEADERS, timeout=6)
                 if res.status_code != 200:
                     continue
 

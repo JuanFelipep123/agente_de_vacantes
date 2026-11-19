@@ -6,6 +6,9 @@ on:
     - cron: '0 */3 * * *'
   workflow_dispatch: # Permite ejecutarlo manualmente desde GitHub con un clic
 
+permissions:
+  contents: write
+
 jobs:
   recolectar:
     runs-on: ubuntu-latest

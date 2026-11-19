@@ -29,6 +29,7 @@ def main():
     parser = argparse.ArgumentParser(description="Agente Recolector y Calificador de Vacantes")
     parser.add_argument("--radar", action="store_true", help="Muestra y envía el radar de habilidades más demandadas a estudiar")
     parser.add_argument("--test-telegram", action="store_true", help="Envía un mensaje de prueba al bot de Telegram")
+    parser.add_argument("--notify-summary", action="store_true", help="Envía mensaje de resumen a Telegram incluso si no hay vacantes relevantes")
     args = parser.parse_args()
 
     db = Database()
@@ -122,6 +123,18 @@ def main():
     print(f"   • Vacantes con match relevante (≥ {matcher.umbral} pts): {total_calificadas}")
     print(f"   • Notificaciones enviadas a Telegram: {total_notificadas}")
     print("=" * 60)
+
+    # Si se ejecutó manualmente desde GitHub Actions o con flag, avisar por Telegram si no hubo novedades
+    es_disparo_manual = os.getenv("GITHUB_EVENT_NAME") == "workflow_dispatch"
+    if (es_disparo_manual or getattr(args, "notify_summary", False)) and total_notificadas == 0 and notifier.esta_configurado():
+        resumen_txt = (
+            f"🤖 <b>Agente ejecutado con éxito</b>\n\n"
+            f"🔍 <b>Vacantes nuevas analizadas hoy:</b> {total_nuevas}\n"
+            f"📍 <b>Filtro activo:</b> Presencial solo en Manizales/Pereira, o 100% Remoto.\n\n"
+            f"ℹ️ Ninguna de las ofertas nuevas de hoy cumplió con los filtros de tu zona o perfil tech (muchas eran presenciales en Bogotá/Medellín o de áreas no afines).\n\n"
+            f"🛡️ <i>El agente sigue vigilando en segundo plano cada 3 horas.</i>"
+        )
+        notifier.enviar_mensaje(resumen_txt)
 
     # Mostrar preview del radar de estudio
     top_skills = db.obtener_top_skills_a_estudiar(limite=3)

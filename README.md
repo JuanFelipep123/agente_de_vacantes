@@ -59,7 +59,11 @@ agente_postulador/
   ```bash
   python main.py
   ```
-- **Ver el Radar de Habilidades a Estudiar:**
+- **Diagnóstico profundo de temas a estudiar para Ingeniería de Sistemas:**
+  ```bash
+  python main.py --que-estudiar
+  ```
+- **Ver el Radar rápido de habilidades más demandadas:**
   ```bash
   python main.py --radar
   ```

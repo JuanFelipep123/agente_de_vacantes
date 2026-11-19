@@ -22,13 +22,16 @@ from collectors.magneto import MagnetoCollector
 from collectors.remoteok import RemoteOKCollector
 from filters.matcher import ProfileMatcher
 from notifiers.telegram import TelegramNotifier
+from analyzers.market_insights import MarketInsightsAnalyzer
 
 BASE_DIR = Path(__file__).resolve().parent
 PERFIL_PATH = BASE_DIR / "config" / "perfil.yaml"
+DB_PATH = BASE_DIR / "data" / "vacantes.db"
 
 def main():
     parser = argparse.ArgumentParser(description="Agente Recolector y Calificador de Vacantes")
     parser.add_argument("--radar", action="store_true", help="Muestra y envía el radar de habilidades más demandadas a estudiar")
+    parser.add_argument("--que-estudiar", action="store_true", help="Analiza a profundidad las vacantes de sistemas y envía los temas específicos a estudiar")
     parser.add_argument("--test-telegram", action="store_true", help="Envía un mensaje de prueba al bot de Telegram")
     parser.add_argument("--notify-summary", action="store_true", help="Envía mensaje de resumen a Telegram incluso si no hay vacantes relevantes")
     args = parser.parse_args()
@@ -49,7 +52,7 @@ def main():
             print("[!] No se pudo enviar el mensaje. Verifica tus credenciales en el archivo .env.")
         return
 
-    # Opción: Reporte de radar de estudio
+    # Opción: Reporte de radar de estudio rápido
     if args.radar:
         top_skills = db.obtener_top_skills_a_estudiar(limite=5)
         print("\n=== TOP HABILIDADES MÁS DEMANDADAS A ESTUDIAR ===")
@@ -61,6 +64,39 @@ def main():
         if notifier.esta_configurado():
             notifier.notificar_radar_estudio(top_skills)
             print("[✓] Reporte del radar enviado a Telegram.")
+        return
+
+    # Opción: Diagnóstico profundo de temas específicos para Ingeniería de Sistemas
+    if args.que_estudiar:
+        print("\n[*] Analizando vacantes de Sistemas y Software en la base de datos...")
+        analyzer = MarketInsightsAnalyzer(db_path=DB_PATH, perfil_path=PERFIL_PATH)
+        diagnostico = analyzer.generar_diagnostico()
+        total = diagnostico.get("total_analizadas", 0)
+
+        if total == 0:
+            print("[!] Aún no hay suficientes vacantes en la base de datos. Ejecuta primero 'python main.py'.")
+            return
+
+        print(f"\n" + "=" * 65)
+        print(f"🎓 DIAGNÓSTICO DEL MERCADO: INGENIERÍA DE SISTEMAS ({total} ofertas)")
+        print("=" * 65)
+        print("\n📌 ÁREAS MÁS DEMANDADAS EN COMÚN:")
+        for item in diagnostico["ranking_categorias"]:
+            print(f"   • {item['categoria']}: {item['porcentaje']}% de las ofertas")
+
+        print("\n🎯 TEMAS ESPECÍFICOS QUE DEBERÍAS ESTUDIAR:")
+        for idx, item in enumerate(diagnostico["temas_prioritarios"], 1):
+            print(f"\n{idx}. {item['area'].upper()} (Demanda: {item['porcentaje_demanda']}%)")
+            for tema in item["temas"]:
+                print(f"   👉 {tema}")
+
+        if notifier.esta_configurado():
+            reporte_msg = analyzer.generar_reporte_telegram(diagnostico)
+            exito = notifier.enviar_mensaje(reporte_msg)
+            if exito:
+                print("\n[✓] Diagnóstico y plan de estudio enviado exitosamente a tu Telegram.")
+            else:
+                print("\n[!] No se pudo enviar el reporte a Telegram.")
         return
 
     print("=" * 60)

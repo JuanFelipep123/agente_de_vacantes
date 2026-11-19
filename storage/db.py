@@ -29,6 +29,7 @@ class Database:
                     url TEXT,
                     modalidad TEXT,
                     ubicacion TEXT,
+                    descripcion TEXT,
                     match_score INTEGER,
                     razones_match TEXT,
                     habilidades_faltantes TEXT,
@@ -36,6 +37,11 @@ class Database:
                     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
+            # Migración: asegurar que la columna descripcion exista si la tabla ya fue creada
+            try:
+                cursor.execute("ALTER TABLE vacantes ADD COLUMN descripcion TEXT")
+            except Exception:
+                pass
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS skills_radar (
                     skill TEXT PRIMARY KEY,
@@ -57,9 +63,9 @@ class Database:
             cursor.execute("""
                 INSERT OR REPLACE INTO vacantes (
                     hash_id, id_origen, fuente, titulo, empresa, url, 
-                    modalidad, ubicacion, match_score, razones_match, 
+                    modalidad, ubicacion, descripcion, match_score, razones_match, 
                     habilidades_faltantes, notificada
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 vacante.hash_id,
                 vacante.id_origen,
@@ -69,6 +75,7 @@ class Database:
                 vacante.url,
                 vacante.modalidad,
                 vacante.ubicacion,
+                vacante.descripcion[:2000] if vacante.descripcion else "",
                 vacante.match_score,
                 json.dumps(vacante.razones_match, ensure_ascii=False),
                 json.dumps(vacante.habilidades_faltantes, ensure_ascii=False),
